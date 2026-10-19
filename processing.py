@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 
-
 def load_image(file_bytes: bytes, max_width: int = 1000) -> np.ndarray:
     arr = np.frombuffer(file_bytes, dtype=np.uint8)
     # chuyen đổi từ bytes sang mảng 1D numpy để cv2 có thể hiểu được
@@ -24,8 +23,8 @@ def to_gray(img: np.ndarray) -> np.ndarray:
 
 
 def magnitude_to_uint8(gx: np.ndarray, gy: np.ndarray) -> np.ndarray:
-    """Độ lớn gradient sqrt(gx² + gy²), chuẩn hoá về [0, 255]."""
-    mag = np.sqrt(gx ** 2 + gy ** 2)
+    # Độ lớn gradient sqrt(gx² + gy²), chuẩn hoá về [0, 255].
+    mag = cv2.magnitude(gx, gy)
     return cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
 
 def denoise(img: np.ndarray, method: str = "Median", ksize: int = 5) -> np.ndarray:
@@ -40,20 +39,19 @@ sharpen_kernel = np.array([[0, -1, 0],
                            [0, -1, 0]], dtype=np.float32)
 
 
-#def sharpen(img: np.ndarray) -> np.ndarray:
-    #return cv2.filter2D(img, ddepth=-1, kernel=sharpen_kernel)
-
 def sharpen(img: np.ndarray) -> np.ndarray:
+    return cv2.filter2D(img, ddepth=-1, kernel=sharpen_kernel)
+
+"""def sharpen_usm(img: np.ndarray) -> np.ndarray:
     img_blur = cv2.GaussianBlur(img, (3, 3), 0)
     img_blur_fl = img_blur.astype(np.float32)
     img = img.astype(np.float32)
     dt = img - img_blur_fl
     sharpened = img + 1.5 * dt
     sharpened = np.clip(sharpened, 0, 255).astype(np.uint8)
-    return img - img_blur_fl
+    return sharpened"""
 
-def step3a_sobel(img: np.ndarray, thresh: int = 60):
-    """Trả về (độ lớn gradient, ảnh biên nhị phân)."""
+def sobel(img: np.ndarray, thresh: int = 60):
     gray = to_gray(img)
     gx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
     gy = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
@@ -69,8 +67,7 @@ PREWITT_Y = np.array([[-1, -1, -1],
                       [1, 1, 1]], dtype=np.float32)
 
 
-def step3b_prewitt(img: np.ndarray, thresh: int = 60):
-    """Trả về (độ lớn gradient, ảnh biên nhị phân)."""
+def prewitt(img: np.ndarray, thresh: int = 60):
     gray = to_gray(img).astype(np.float32)
     gx = cv2.filter2D(gray, cv2.CV_32F, PREWITT_X)
     gy = cv2.filter2D(gray, cv2.CV_32F, PREWITT_Y)
@@ -78,17 +75,17 @@ def step3b_prewitt(img: np.ndarray, thresh: int = 60):
     _, edges = cv2.threshold(mag, thresh, 255, cv2.THRESH_BINARY)
     return mag, edges
 
-def step3c_canny(img: np.ndarray, low: int = 80, high: int = 160) -> np.ndarray:
+def canny(img: np.ndarray, low: int = 80, high: int = 160) -> np.ndarray:
     return cv2.Canny(to_gray(img), low, high)
 
 
 def run_pipeline(img, method="Median", ksize=5,
                  sobel_t=60, prewitt_t=60, canny_low=80, canny_high=160) -> dict:
-    denoised = step1_denoise(img, method, ksize)
-    sharpened = step2_sharpen(denoised)
-    sobel_mag, sobel_edges = step3a_sobel(sharpened, sobel_t)
-    prewitt_mag, prewitt_edges = step3b_prewitt(sharpened, prewitt_t)
-    canny_edges = step3c_canny(sharpened, canny_low, canny_high)
+    denoised = denoise(img, method, ksize)
+    sharpened = sharpen(denoised)
+    sobel_mag, sobel_edges = sobel(sharpened, sobel_t)
+    prewitt_mag, prewitt_edges = prewitt(sharpened, prewitt_t)
+    canny_edges = canny(sharpened, canny_low, canny_high)
     return {
         "original": img, "denoised": denoised, "sharpened": sharpened,
         "sobel_mag": sobel_mag, "sobel": sobel_edges,

@@ -5,7 +5,7 @@ from processing import bgr2rgb, load_image, run_pipeline
 st.set_page_config(page_title="Image Processing with OpenCV", layout="wide")
 st.title("🖼️ Image Processing Application")
 
-# ---------- Sidebar: tải ảnh + tham số ----------
+#Sidebar: loadimg
 with st.sidebar:
     st.header("1. Upload Image")
     uploaded = st.file_uploader("Select an image (JPG/PNG)", type=["jpg", "jpeg", "png", "bmp"])
@@ -24,7 +24,7 @@ if uploaded is None:
     st.info("👈 Please upload an image on the left sidebar to get started.")
     st.stop()
 
-# ---------- Gọi backend ----------
+# backend
 try:
     img = load_image(uploaded.getvalue())
 except ValueError as e:
@@ -33,7 +33,7 @@ except ValueError as e:
 
 r = run_pipeline(img, method, ksize, sobel_t, prewitt_t, canny_low, canny_high)
 
-# ---------- Các khối hiển thị ----------
+# display
 def show_original():
     st.subheader("Original Image")
     st.image(bgr2rgb(r["original"]), caption="Original color image uploaded",
@@ -69,7 +69,7 @@ def show_edges():
         g2.image(r["prewitt_mag"], caption="Prewitt Gradient Magnitude", use_container_width=True)
 
 
-# ---------- Chọn bước xem ----------
+# select view
 view = st.radio(
     "Select a step to view:",
     ["All Steps", "Original Image", "Denoising/Smoothing", "Sharpening", "Edge Detection"],

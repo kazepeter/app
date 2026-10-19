@@ -28,20 +28,29 @@ def magnitude_to_uint8(gx: np.ndarray, gy: np.ndarray) -> np.ndarray:
     mag = np.sqrt(gx ** 2 + gy ** 2)
     return cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
 
-def step1_denoise(img: np.ndarray, method: str = "Median", ksize: int = 5) -> np.ndarray:
+def denoise(img: np.ndarray, method: str = "Median", ksize: int = 5) -> np.ndarray:
     ksize = ksize if ksize % 2 == 1 else ksize + 1  
     if method == "Median":
         return cv2.medianBlur(img, ksize)
     return cv2.GaussianBlur(img, (ksize, ksize), 0)
 
 
-SHARPEN_KERNEL = np.array([[0, -1, 0],
+sharpen_kernel = np.array([[0, -1, 0],
                            [-1, 5, -1],
                            [0, -1, 0]], dtype=np.float32)
 
 
-def step2_sharpen(img: np.ndarray) -> np.ndarray:
-    return cv2.filter2D(img, ddepth=-1, kernel=SHARPEN_KERNEL)
+#def sharpen(img: np.ndarray) -> np.ndarray:
+    #return cv2.filter2D(img, ddepth=-1, kernel=sharpen_kernel)
+
+def sharpen(img: np.ndarray) -> np.ndarray:
+    img_blur = cv2.GaussianBlur(img, (3, 3), 0)
+    img_blur_fl = img_blur.astype(np.float32)
+    img = img.astype(np.float32)
+    dt = img - img_blur_fl
+    sharpened = img + 1.5 * dt
+    sharpened = np.clip(sharpened, 0, 255).astype(np.uint8)
+    return img - img_blur_fl
 
 def step3a_sobel(img: np.ndarray, thresh: int = 60):
     """Trả về (độ lớn gradient, ảnh biên nhị phân)."""
